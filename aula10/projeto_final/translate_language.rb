@@ -2,66 +2,57 @@ require 'rest-client'
 require 'json'
 
 class Translator
-
   def initialize
-    interaction
     @url = 'https://translate.yandex.net/api/v1.5/tr.json/translate'
+    @url_detector = 'https://translate.yandex.net/api/v1.5/tr.json/detect'
+    @url_list = 'https://translate.yandex.net/api/v1.5/tr.json/getLangs'
     @key = 'trnsl.1.1.20210224T171755Z.7b1bf12113925bab.eaf8c5a4d4f27b492502f0a0d9a8c786ca53ebd8'
-    @text = @text_word
-    @lang = "#{@current_language}-#{@language_translate}"
+    main
   end
 
-  def interaction
-    system 'clear'
-    print 'Digite o texto ou palavra que deseja traduzir: '
-    @text_word = gets.chomp.to_s
-    print 'Digite o idioma em que o texto ou palavra se encontra: '
-    @current_language = gets.chomp.to_s.downcase
-    print 'Digite o idioma que deseja traduzir: '
-    @language_translate = gets.chomp.to_s.downcase
+  def translate
+    response = RestClient.post( @url,
+                                {
+                                    key: @key,
+                                    text: @text,
+                                    lang: "#{@origin}-#{@destiny}"
+                                })
+    puts "Translating..."
+    JSON.parse(response)['text']
   end
 
-  def translating
-    response = RestClient.get(@url, params: {key: @key, text: @text, lang: @lang})
-    @result = JSON.parse(response)["text"]
+  def detector
+    response = RestClient.post( @url_detector,
+                                {
+                                    key: @key,
+                                    text: @text
+                                })
+    @origin = JSON.parse(response)['lang']
   end
 
-  def show_in_terminal
-    system 'clear'
-    puts "********** Tradução **********"
-    puts "\n\n"
-    puts @text_word
-    puts @result
-    puts "\n\n"
-  end
-
-  def save
-    name_txt = Time.new.strftime('%d-%m-%y_%H:%M') + '.txt'
-    File.open(name_txt, 'a') do |line|
-      line.puts @lang
-      line.puts @text_word
-      line.puts @result
+  def list
+    response = RestClient.post( @url_list,
+                                {
+                                    key: @key,
+                                    ui: @origin
+                                })
+    return JSON.parse(response)['langs'].each do |key, value|
+      puts "Código: #{key} - Idioma: #{value}"
     end
-    puts "Salvo com sucesso em .txt!"
   end
 
-end
+  # def save
 
-def start_translate
-  loop do
-    start = Translator.new
-    start.translating
-    start.show_in_terminal
-    start.save
+  # end
 
-    puts "\n\n"
-    print 'Sair? (S/N): '
-    yes_no = gets.chomp.to_s.upcase
-    if yes_no === 'S'
-      system 'clear'
-      break
-    elsif yes_no === 'N'
-      next
-    end
+  def main
+    print "Enter your text: "
+    @text = gets.chomp
+    detector
+    puts "We have detected the language is: #{@origin}."
+    sleep(1)
+    list
+    print "Enter the translation code: "
+    @destiny = gets.chomp
   end
 end

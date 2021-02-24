@@ -1,2 +1,4 @@
 require_relative 'translate_language'
-start_translate
+
+init = Translator.new
+puts init.translate
